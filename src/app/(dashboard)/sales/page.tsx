@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Sparkles, ScanLine } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +21,9 @@ export default function SalesPage() {
     date: new Date().toISOString().slice(0, 16),
     notes: '',
   });
+
+  const [showScanner, setShowScanner] = useState(false);
+  const scannerRef = useRef<HTMLDivElement>(null);
 
   const price = Number(form.price || 0);
   const quantity = Number(form.quantity || 0);
@@ -45,7 +50,33 @@ export default function SalesPage() {
       date: new Date().toISOString().slice(0, 16),
       notes: '',
     });
+    setShowScanner(false);
   };
+
+  useEffect(() => {
+    if (showScanner && scannerRef.current) {
+      const scanner = new Html5QrcodeScanner(
+        'scanner',
+        { fps: 10, qrbox: { width: 250, height: 80 } },
+        false
+      );
+
+      scanner.render(
+        (decodedText) => {
+          setForm((prev) => ({ ...prev, barcode: decodedText }));
+          setShowScanner(false);
+          scanner.clear();
+        },
+        (error) => {
+          console.warn('Scan error:', error);
+        }
+      );
+
+      return () => {
+        scanner.clear().catch(console.error);
+      };
+    }
+  }, [showScanner]);
 
   return (
     <main className="min-h-screen bg-white p-6">
@@ -59,16 +90,33 @@ export default function SalesPage() {
 
       <form onSubmit={handleSubmit}>
         <Card className="w-full p-6 space-y-6 border border-gray-200 shadow">
-          {/* Barcode Field (manual only) */}
+          {/* Barcode Field */}
           <div className="space-y-2">
             <Label htmlFor="barcode">Штрихкод</Label>
-            <Input
-              id="barcode"
-              name="barcode"
-              value={form.barcode}
-              onChange={handleChange}
-              placeholder="Введите вручную"
-            />
+            <div className="flex gap-2 flex-col sm:flex-row">
+              <Input
+                id="barcode"
+                name="barcode"
+                value={form.barcode}
+                onChange={handleChange}
+                placeholder="Введите вручную или отсканируйте"
+              />
+              <Button
+                type="button"
+                onClick={() => setShowScanner((prev) => !prev)}
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                <ScanLine className="mr-2" size={18} />
+                {showScanner ? 'Скрыть' : 'Сканировать'}
+              </Button>
+            </div>
+            {showScanner && (
+              <div
+                id="scanner"
+                ref={scannerRef}
+                className="mt-2 w-full max-w-md h-56 rounded-md border shadow"
+              />
+            )}
           </div>
 
           {/* Product info */}
@@ -140,11 +188,13 @@ export default function SalesPage() {
             </div>
           </div>
 
+          {/* Total */}
           <div className="text-sm text-gray-700 font-medium">
             💰 Общая сумма со скидкой:{' '}
             <span className="font-bold text-blue-600">₸{total.toFixed(2)}</span>
           </div>
 
+          {/* Date + Notes */}
           <div className="space-y-2">
             <Label htmlFor="date">Дата и время</Label>
             <Input
