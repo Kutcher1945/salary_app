@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Quagga from 'quagga'; // npm install quagga
-import { Sparkles, ScanLine } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,10 +19,6 @@ export default function SalesPage() {
     date: new Date().toISOString().slice(0, 16),
     notes: '',
   });
-
-  const [showScanner, setShowScanner] = useState(false);
-  const scannerRef = useRef<HTMLDivElement>(null);
-  const isScannerInitialized = useRef(false);
 
   const price = Number(form.price || 0);
   const quantity = Number(form.quantity || 0);
@@ -50,59 +45,7 @@ export default function SalesPage() {
       date: new Date().toISOString().slice(0, 16),
       notes: '',
     });
-    stopScanner();
   };
-
-  const stopScanner = () => {
-    if (isScannerInitialized.current) {
-      Quagga.offDetected(onDetected);
-      Quagga.stop();
-      isScannerInitialized.current = false;
-    }
-  };
-
-  const onDetected = (result: any) => {
-    if (result.codeResult?.code) {
-      setForm((prev) => ({
-        ...prev,
-        barcode: result.codeResult.code,
-      }));
-      setShowScanner(false);
-      stopScanner();
-    }
-  };
-
-  useEffect(() => {
-    if (showScanner && scannerRef.current) {
-      Quagga.init(
-        {
-          inputStream: {
-            type: 'LiveStream',
-            target: scannerRef.current,
-            constraints: {
-              facingMode: 'environment',
-            },
-          },
-          decoder: {
-            readers: ['ean_reader', 'code_128_reader', 'upc_reader'],
-          },
-        },
-        (err: Error | null) => {
-          if (err) {
-            console.error('🛑 Quagga init error:', err.message);
-            return;
-          }
-          Quagga.start();
-          Quagga.onDetected(onDetected);
-          isScannerInitialized.current = true;
-        }
-      );
-    }
-
-    return () => {
-      stopScanner();
-    };
-  }, [showScanner]);
 
   return (
     <main className="min-h-screen bg-white p-6">
@@ -116,32 +59,16 @@ export default function SalesPage() {
 
       <form onSubmit={handleSubmit}>
         <Card className="w-full p-6 space-y-6 border border-gray-200 shadow">
-          {/* Barcode Scanner */}
+          {/* Barcode Field (manual only) */}
           <div className="space-y-2">
             <Label htmlFor="barcode">Штрихкод</Label>
-            <div className="flex gap-2">
-              <Input
-                id="barcode"
-                name="barcode"
-                value={form.barcode}
-                onChange={handleChange}
-                placeholder="Сканируйте или введите вручную"
-              />
-              <Button
-                type="button"
-                onClick={() => setShowScanner((prev) => !prev)}
-                className="bg-blue-500 text-white hover:bg-blue-600"
-              >
-                <ScanLine className="mr-2" size={18} />
-                {showScanner ? 'Скрыть' : 'Сканировать'}
-              </Button>
-            </div>
-            {showScanner && (
-              <div
-                ref={scannerRef}
-                className="w-full max-w-sm h-60 mt-2 rounded-md border shadow overflow-hidden"
-              />
-            )}
+            <Input
+              id="barcode"
+              name="barcode"
+              value={form.barcode}
+              onChange={handleChange}
+              placeholder="Введите вручную"
+            />
           </div>
 
           {/* Product info */}
