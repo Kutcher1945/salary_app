@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Sparkles, ScanLine } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-
-import { Card } from '@/components/ui/card';
+import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -21,9 +18,6 @@ export default function SalesPage() {
     date: new Date().toISOString().slice(0, 16),
     notes: '',
   });
-
-  const [showScanner, setShowScanner] = useState(false);
-  const scannerRef = useRef<HTMLDivElement>(null);
 
   const price = Number(form.price || 0);
   const quantity = Number(form.quantity || 0);
@@ -50,33 +44,7 @@ export default function SalesPage() {
       date: new Date().toISOString().slice(0, 16),
       notes: '',
     });
-    setShowScanner(false);
   };
-
-  useEffect(() => {
-    if (showScanner && scannerRef.current) {
-      const scanner = new Html5QrcodeScanner(
-        'scanner',
-        { fps: 10, qrbox: { width: 250, height: 80 } },
-        false
-      );
-
-      scanner.render(
-        (decodedText) => {
-          setForm((prev) => ({ ...prev, barcode: decodedText }));
-          setShowScanner(false);
-          scanner.clear();
-        },
-        (error) => {
-          console.warn('Scan error:', error);
-        }
-      );
-
-      return () => {
-        scanner.clear().catch(console.error);
-      };
-    }
-  }, [showScanner]);
 
   return (
     <main className="min-h-screen bg-white p-6">
@@ -88,142 +56,125 @@ export default function SalesPage() {
         🧾 Заполните форму ниже, чтобы добавить новую продажу.
       </p>
 
-      <form onSubmit={handleSubmit}>
-        <Card className="w-full p-6 space-y-6 border border-gray-200 shadow">
-          {/* Barcode Field */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Barcode */}
+        <div className="space-y-2">
+          <Label htmlFor="barcode">Штрихкод</Label>
+          <Input
+            id="barcode"
+            name="barcode"
+            value={form.barcode}
+            onChange={handleChange}
+            placeholder="Введите вручную"
+          />
+        </div>
+
+        {/* Product and Category */}
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="barcode">Штрихкод</Label>
-            <div className="flex gap-2 flex-col sm:flex-row">
-              <Input
-                id="barcode"
-                name="barcode"
-                value={form.barcode}
-                onChange={handleChange}
-                placeholder="Введите вручную или отсканируйте"
-              />
-              <Button
-                type="button"
-                onClick={() => setShowScanner((prev) => !prev)}
-                className="bg-blue-500 text-white hover:bg-blue-600"
-              >
-                <ScanLine className="mr-2" size={18} />
-                {showScanner ? 'Скрыть' : 'Сканировать'}
-              </Button>
-            </div>
-            {showScanner && (
-              <div
-                id="scanner"
-                ref={scannerRef}
-                className="mt-2 w-full max-w-md h-56 rounded-md border shadow"
-              />
-            )}
-          </div>
-
-          {/* Product info */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="product">Наименование товара</Label>
-              <Input
-                id="product"
-                name="product"
-                value={form.product}
-                onChange={handleChange}
-                placeholder="например, Футболка Лето"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="category">Категория</Label>
-              <Input
-                id="category"
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                placeholder="например, Футболки"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Quantity, price, discount */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Количество</Label>
-              <Input
-                id="quantity"
-                name="quantity"
-                type="number"
-                value={form.quantity}
-                onChange={handleChange}
-                min="1"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Цена за единицу</Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                value={form.price}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="discount">Скидка (%)</Label>
-              <Input
-                id="discount"
-                name="discount"
-                type="number"
-                value={form.discount}
-                onChange={handleChange}
-                min="0"
-                max="100"
-                placeholder="например, 10"
-              />
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="text-sm text-gray-700 font-medium">
-            💰 Общая сумма со скидкой:{' '}
-            <span className="font-bold text-blue-600">₸{total.toFixed(2)}</span>
-          </div>
-
-          {/* Date + Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="date">Дата и время</Label>
+            <Label htmlFor="product">Наименование товара</Label>
             <Input
-              id="date"
-              name="date"
-              type="datetime-local"
-              value={form.date}
+              id="product"
+              name="product"
+              value={form.product}
               onChange={handleChange}
+              placeholder="например, Футболка Лето"
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Примечание</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              value={form.notes}
+            <Label htmlFor="category">Категория</Label>
+            <Input
+              id="category"
+              name="category"
+              value={form.category}
               onChange={handleChange}
-              placeholder="Опционально: имя клиента, акция и т.д."
-              rows={3}
+              placeholder="например, Футболки"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Quantity, Price, Discount */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Количество</Label>
+            <Input
+              id="quantity"
+              name="quantity"
+              type="number"
+              value={form.quantity}
+              onChange={handleChange}
+              min="1"
+              required
             />
           </div>
 
-          <div className="pt-4">
-            <Button type="submit" className="bg-black text-white hover:bg-gray-800">
-              Сохранить продажу
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="price">Цена за единицу</Label>
+            <Input
+              id="price"
+              name="price"
+              type="number"
+              value={form.price}
+              onChange={handleChange}
+              required
+            />
           </div>
-        </Card>
+
+          <div className="space-y-2">
+            <Label htmlFor="discount">Скидка (%)</Label>
+            <Input
+              id="discount"
+              name="discount"
+              type="number"
+              value={form.discount}
+              onChange={handleChange}
+              min="0"
+              max="100"
+              placeholder="например, 10"
+            />
+          </div>
+        </div>
+
+        {/* Total */}
+        <div className="text-sm text-gray-700 font-medium">
+          💰 Общая сумма со скидкой:{' '}
+          <span className="font-bold text-blue-600">₸{total.toFixed(2)}</span>
+        </div>
+
+        {/* Date */}
+        <div className="space-y-2">
+          <Label htmlFor="date">Дата и время</Label>
+          <Input
+            id="date"
+            name="date"
+            type="datetime-local"
+            value={form.date}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">Примечание</Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            value={form.notes}
+            onChange={handleChange}
+            placeholder="Опционально: имя клиента, акция и т.д."
+            rows={3}
+          />
+        </div>
+
+        {/* Submit */}
+        <div className="pt-4">
+          <Button type="submit" className="bg-black text-white hover:bg-gray-800">
+            Сохранить продажу
+          </Button>
+        </div>
       </form>
     </main>
   );
