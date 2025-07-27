@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Quagga from 'quagga'; // npm install quagga
 import { Sparkles, ScanLine } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 
 export default function SalesPage() {
   const [form, setForm] = useState({
@@ -23,6 +23,7 @@ export default function SalesPage() {
 
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
+  const isScannerInitialized = useRef(false);
 
   const price = Number(form.price || 0);
   const quantity = Number(form.quantity || 0);
@@ -49,31 +50,58 @@ export default function SalesPage() {
       date: new Date().toISOString().slice(0, 16),
       notes: '',
     });
-    setShowScanner(false);
+    stopScanner();
+  };
+
+  const stopScanner = () => {
+    if (isScannerInitialized.current) {
+      Quagga.offDetected(onDetected);
+      Quagga.stop();
+      isScannerInitialized.current = false;
+    }
+  };
+
+  const onDetected = (result: any) => {
+    if (result.codeResult?.code) {
+      setForm((prev) => ({
+        ...prev,
+        barcode: result.codeResult.code,
+      }));
+      setShowScanner(false);
+      stopScanner();
+    }
   };
 
   useEffect(() => {
     if (showScanner && scannerRef.current) {
-      const scanner = new Html5QrcodeScanner(
-        'scanner',
-        { fps: 10, qrbox: 250 },
-        false
-      );
-      scanner.render(
-        (decodedText) => {
-          setForm((prev) => ({ ...prev, barcode: decodedText }));
-          setShowScanner(false);
-          scanner.clear();
+      Quagga.init(
+        {
+          inputStream: {
+            type: 'LiveStream',
+            target: scannerRef.current,
+            constraints: {
+              facingMode: 'environment',
+            },
+          },
+          decoder: {
+            readers: ['ean_reader', 'code_128_reader', 'upc_reader'],
+          },
         },
-        (error) => {
-          console.warn('Ошибка сканирования:', error);
+        (err: Error | null) => {
+          if (err) {
+            console.error('🛑 Quagga init error:', err.message);
+            return;
+          }
+          Quagga.start();
+          Quagga.onDetected(onDetected);
+          isScannerInitialized.current = true;
         }
       );
-
-      return () => {
-        scanner.clear().catch(console.error);
-      };
     }
+
+    return () => {
+      stopScanner();
+    };
   }, [showScanner]);
 
   return (
@@ -88,8 +116,7 @@ export default function SalesPage() {
 
       <form onSubmit={handleSubmit}>
         <Card className="w-full p-6 space-y-6 border border-gray-200 shadow">
-
-          {/* Barcode Scanner Section */}
+          {/* Barcode Scanner */}
           <div className="space-y-2">
             <Label htmlFor="barcode">Штрихкод</Label>
             <div className="flex gap-2">
@@ -102,16 +129,22 @@ export default function SalesPage() {
               />
               <Button
                 type="button"
-                onClick={() => setShowScanner(true)}
-                className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600"
+                onClick={() => setShowScanner((prev) => !prev)}
+                className="bg-blue-500 text-white hover:bg-blue-600"
               >
-                <ScanLine size={18} />
-                Сканировать
+                <ScanLine className="mr-2" size={18} />
+                {showScanner ? 'Скрыть' : 'Сканировать'}
               </Button>
             </div>
+            {showScanner && (
+              <div
+                ref={scannerRef}
+                className="w-full max-w-sm h-60 mt-2 rounded-md border shadow overflow-hidden"
+              />
+            )}
           </div>
 
-          {/* Product & Category */}
+          {/* Product info */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="product">Наименование товара</Label>
@@ -138,7 +171,7 @@ export default function SalesPage() {
             </div>
           </div>
 
-          {/* Quantity, Price, Discount */}
+          {/* Quantity, price, discount */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="quantity">Количество</Label>
@@ -185,7 +218,6 @@ export default function SalesPage() {
             <span className="font-bold text-blue-600">₸{total.toFixed(2)}</span>
           </div>
 
-          {/* Date and Notes */}
           <div className="space-y-2">
             <Label htmlFor="date">Дата и время</Label>
             <Input
@@ -216,31 +248,6 @@ export default function SalesPage() {
           </div>
         </Card>
       </form>
-
-      {/* Scanner Modal */}
-      {showScanner && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center px-4">
-          <div className="relative w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-semibold text-black">📷 Сканирование штрихкода</h2>
-              <button
-                onClick={() => setShowScanner(false)}
-                className="text-gray-600 hover:text-red-500 transition text-sm"
-              >
-                Закрыть ✕
-              </button>
-            </div>
-            <div
-              id="scanner"
-              ref={scannerRef}
-              className="w-full h-[300px] rounded border border-gray-300"
-            />
-            <p className="text-center text-sm text-gray-600 mt-2">
-              Наведите камеру на штрихкод. Сканирование произойдет автоматически.
-            </p>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
