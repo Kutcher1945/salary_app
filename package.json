@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ericblade/quagga2": "ericblade/quagga2",
     "@hookform/resolvers": "^5.2.0",
     "@nivo/bar": "^0.99.0",
     "@nivo/line": "^0.99.0",
